@@ -1,19 +1,24 @@
-# [Project name]
+# Rass Derb Cup Discord Bot
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Modular Discord bot foundation for Rass Derb Cup and Esports PUBG MOBILE MEA, starting with a JSON-driven `/embed` command.
 
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `python -m rass_derb_bot` — run the Discord bot (requires the `TOKEN` Replit Secret)
+- `python -m unittest discover -s tests -v` — run bot payload parser tests
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required bot secret: `TOKEN` — Discord bot token stored in Replit Secrets
+- Optional bot env: `GUILD_ID` — sync slash commands to one server for immediate development updates
+- Existing API server env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Bot: Python 3.11, `discord.py`
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
@@ -22,23 +27,32 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `rass_derb_bot/` — Discord client, cogs, and reusable services
+- `tests/` — Python unit tests
+- `artifacts/api-server/` — shared API service
+- `lib/api-spec/openapi.yaml` — API contract source of truth
+- `lib/db/src/schema/` — shared database schema
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Discord bot credentials are loaded only from environment variables; never commit a token.
+- Slash commands sync globally unless `GUILD_ID` is set for rapid single-server development.
+- Feature commands are isolated as `discord.py` extensions; payload conversion and validation live in services.
+- Bot content mentions are disabled by default to prevent accidental pings.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Admins can post validated Discord messages and custom embeds through `/embed`.
+- Planned extension areas: form sections and questions, form buttons, and private staff submission routing.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Build the Rass Derb Cup Discord bot one modular step at a time.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The bot requests Discord's privileged Message Content Intent; enable it in the Discord Developer Portal.
+- Discord global slash-command changes can take time to appear. Set `GUILD_ID` while developing in one server.
 
 ## Pointers
 

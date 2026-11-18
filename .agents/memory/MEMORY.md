@@ -1,0 +1,1 @@
+- [Python package setup](python-package-setup.md) — use Replit's Python Tools module for pip installs; the base-only runtime is externally managed.
