@@ -1,0 +1,29 @@
+Build a professional, advanced, and modular Discord bot in Python (discord.py) for the "Rass Derb Cup" & "Esports PUBG MOBILE MEA" platform. We want a clean, step-by-step implementation that handles custom embeds, dynamic forms, buttons, and private staff routing.
+
+Here is the complete architectural roadmap and requirements:
+
+1. **Bot Infrastructure & Security:**
+   - Use secure token handling via Replit Secrets (`os.getenv("TOKEN")`).
+   - Enable proper intents (`message_content = True`, etc.) and support persistent views (`client.add_view()`) so interactive buttons never break after restarts.
+
+2. **Module 1: Custom Dynamic Embed System (`/embed`)**
+   - Command: `/embed`
+   - Functionality: Allows admins to input a custom JSON payload (supporting content, embeds, title, description, colors, fields, footer, and animated image URLs like banners) and posts it cleanly to the designated channel.
+
+3. **Module 2: Dynamic Form Builder (Sections & Questions)**
+   - `/form-section`: Create a specific form section/topic (e.g., `rass-derb-qa`).
+   - `/form-question`: Add structured questions to a specific section (e.g., Short text or Paragraph questions like "Topic / Subject" and "Your Question").
+
+4. **Module 3: Button & Message Linking (`/button-form`)**
+   - Command: `/button-form`
+   - Functionality: Takes an existing Discord message link (where the `/embed` was posted), attaches an interactive form button to it, and allows customizing the button's title (e.g., "❓ Ask a Question"), style color code, and linking it directly to the designated form section.
+
+5. **Module 4: Staff Routing & Submissions (`/setup-form`)**
+   - Command: `/setup-form`
+   - Functionality: Links the form section to a private staff room channel ID.
+   - When a member clicks the button, a modal (pop-up form) opens. When submitted:
+     - The user receives an ephemeral success message.
+     - A clean, professional embed is sent automatically to the private staff room.
+     - The staff log embed must display: The user's avatar image, user ID/mention, the answers provided, and formatted cleanly in a professional color.
+
+Please initialize the project with this complete architecture and ensure the code is modular, error-free, and ready for deployment.
