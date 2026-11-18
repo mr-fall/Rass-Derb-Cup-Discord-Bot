@@ -19,6 +19,13 @@ The bot syncs slash commands globally by default. To make commands appear
 immediately in one development server, set the non-secret `GUILD_ID` environment
 variable to that server's numeric ID before starting the workflow.
 
+Discord only lists `/embed` for members with Manage Server permission because it
+is an admin command. The application must be installed with both the `bot` and
+`applications.commands` scopes.
+
+Mention the bot in a server message to receive its current gateway heartbeat
+latency in milliseconds.
+
 ## `/embed`
 
 Use `/embed` with a JSON object and optionally choose a destination text channel.
@@ -57,7 +64,7 @@ Image URLs must use `http` or `https`; GIF URLs are supported.
 - `rass_derb_bot/bot.py` — intents, extension loading, command sync, and the
   persistent-view registration hook for future interactive modules.
 - `rass_derb_bot/cogs/` — one Discord command module per feature.
-- `rass_derb_bot/services/` — reusable validation and business logic.
+- `rass_derb_bot/services/` — reusable validation, ping formatting, and business logic.
 - `tests/` — standard-library unit tests.
 
 Add upcoming commands as separate cogs and register them in

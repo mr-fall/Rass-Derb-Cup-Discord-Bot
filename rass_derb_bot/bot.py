@@ -15,7 +15,10 @@ logger = logging.getLogger(__name__)
 class RassDerbBot(commands.Bot):
     """Central bot client; feature modules are loaded as extensions."""
 
-    EXTENSIONS = ("rass_derb_bot.cogs.embed",)
+    EXTENSIONS = (
+        "rass_derb_bot.cogs.embed",
+        "rass_derb_bot.cogs.ping",
+    )
 
     def __init__(self, settings: Settings) -> None:
         intents = discord.Intents.default()
