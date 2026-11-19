@@ -32,22 +32,33 @@ class RassDerbBot(commands.Bot):
 
     def __init__(self, settings: Settings) -> None:
         intents = discord.Intents.default()
-        # Enabled to match the bot's planned message-aware modules. This is a
-        # privileged intent and must also be enabled in the Discord Developer Portal.
         intents.message_content = True
 
-        super().__init__(command_prefix=commands.when_mentioned, intents=intents)
+        super().__init__(command_prefix=commands.when_mentioned_or("!"), intents=intents)
         self.settings = settings
         self._persistent_views: list[discord.ui.View] = []
         self.db_pool: asyncpg.Pool | None = None
         self.forms: Any = None
 
-    def register_persistent_view(self, view: discord.ui.View) -> None:
-        """Queue a timeout-free view for registration after extensions load.
+        self._register_prefix_commands()
 
-        Future button modules can call this during setup. The actual registration
-        uses Client.add_view so custom buttons survive bot restarts.
-        """
+    def _register_prefix_commands(self) -> None:
+        @self.command(name="sync")
+        @commands.has_permissions(manage_guild=True)
+        async def sync_cmd(ctx: commands.Context) -> None:
+            if ctx.guild:
+                self.tree.copy_global_to(guild=ctx.guild)
+                synced = await self.tree.sync(guild=ctx.guild)
+                await ctx.send(
+                    f"✅ **Synchronized {len(synced)} slash commands instantly to {ctx.guild.name}!**\n"
+                    "Press `Ctrl + R` in Discord if you don't see them right away in `/` autocomplete."
+                )
+            else:
+                synced = await self.tree.sync()
+                await ctx.send(f"✅ Synchronized {len(synced)} global slash commands.")
+
+    def register_persistent_view(self, view: discord.ui.View) -> None:
+        """Queue a timeout-free view for registration after extensions load."""
         if view.timeout is not None:
             raise ValueError("Persistent views must use timeout=None.")
         self._persistent_views.append(view)
@@ -100,35 +111,25 @@ class RassDerbBot(commands.Bot):
 
         await self._restore_persistent_form_buttons()
 
-        if self.settings.guild_id is not None:
-            guild = discord.Object(id=self.settings.guild_id)
-            self.tree.copy_global_to(guild=guild)
-            synced = await self.tree.sync(guild=guild)
-            logger.info(
-                "Synchronized %d application command(s) to configured server.",
-                len(synced),
-            )
-            return
-
+        # Global sync first
         synced = await self.tree.sync()
         logger.info("Synchronized %d global application command(s).", len(synced))
 
     async def on_ready(self) -> None:
         logger.info("Logged in as %s (ID: %s)", self.user, self.user.id if self.user else "None")
-        await self._cleanup_duplicate_guild_commands()
-
-    async def _cleanup_duplicate_guild_commands(self) -> None:
-        """Scan guilds and remove leftover guild-specific commands that cause duplicate /embed."""
-        if self.settings.guild_id is not None:
-            return
+        # Instant-sync to all current guilds so slash commands appear immediately without Discord's 1-hour global delay
         for guild in self.guilds:
             try:
-                guild_commands = await self.tree.fetch_commands(guild=guild)
-                for command in guild_commands:
-                    await command.delete()
-                    logger.info("Removed duplicate guild command '/%s' from '%s'", command.name, guild.name)
+                self.tree.copy_global_to(guild=guild)
+                synced = await self.tree.sync(guild=guild)
+                logger.info(
+                    "Instant-synced %d command(s) to server '%s' (%d)",
+                    len(synced),
+                    guild.name,
+                    guild.id,
+                )
             except Exception as e:
-                logger.debug("Could not clean guild commands in '%s': %s", guild.name, e)
+                logger.warning("Could not instant-sync commands to '%s': %s", guild.name, e)
 
     async def _remove_legacy_embed_command(self) -> None:
         guild_id = self.settings.legacy_guild_id
