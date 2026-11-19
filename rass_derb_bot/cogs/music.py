@@ -27,6 +27,16 @@ class MusicCog(commands.Cog, name="Music"):
             self.players[guild_id] = MusicPlayer(guild_id)
         return self.players[guild_id]
 
+    async def cog_app_command_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
+        logger.error("Music command error: %s", error)
+        msg = f"❌ An error occurred: {error}"
+        if interaction.response.is_done():
+            await interaction.followup.send(msg, ephemeral=True)
+        else:
+            await interaction.response.send_message(msg, ephemeral=True)
+
     async def _ensure_voice(
         self, interaction: discord.Interaction
     ) -> tuple[MusicPlayer | None, discord.VoiceChannel | None]:
@@ -46,14 +56,19 @@ class MusicCog(commands.Cog, name="Music"):
         )
 
         voice_client = interaction.guild.voice_client
-        if voice_client is None:
-            voice_client = await channel.connect()
-            player.voice_client = voice_client
-        elif voice_client.channel != channel:
-            await voice_client.move_to(channel)
-            player.voice_client = voice_client
-        else:
-            player.voice_client = voice_client
+        try:
+            if voice_client is None:
+                voice_client = await channel.connect(timeout=20.0, reconnect=True)
+                player.voice_client = voice_client
+            elif voice_client.channel != channel:
+                await voice_client.move_to(channel)
+                player.voice_client = voice_client
+            else:
+                player.voice_client = voice_client
+        except Exception as e:
+            logger.exception("Voice connection error: %s", e)
+            await interaction.followup.send(f"❌ Failed to connect to voice channel: {e}", ephemeral=True)
+            return None, None
 
         return player, channel
 
@@ -72,7 +87,7 @@ class MusicCog(commands.Cog, name="Music"):
 
         if not player.is_playing and not player.is_paused:
             player.current = song
-            player._start_stream(song)
+            player._start_stream(song, announce=False)
             embed = player.create_now_playing_embed()
             view = MusicControlView(player)
             await interaction.followup.send(embed=embed, view=view)
@@ -216,9 +231,10 @@ class MusicCog(commands.Cog, name="Music"):
 
     @app_commands.command(name="join", description="Connect the bot to your voice channel.")
     async def join(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
         player, channel = await self._ensure_voice(interaction)
         if player and channel:
-            await interaction.response.send_message(f"🔊 Connected to **{channel.name}**.")
+            await interaction.followup.send(f"🔊 Connected to **{channel.name}**.")
 
     @app_commands.command(name="leave", description="Disconnect the bot from the voice channel.")
     async def leave(self, interaction: discord.Interaction) -> None:
@@ -267,7 +283,6 @@ class MusicCog(commands.Cog, name="Music"):
         if index < 1 or index > len(player.queue):
             await interaction.response.send_message(f"❌ Invalid index. Queue has {len(player.queue)} tracks.", ephemeral=True)
             return
-        # Remove tracks before the target index
         for _ in range(index - 1):
             player.queue.pop(0)
         player.skip()
@@ -344,7 +359,6 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="spotify", description="Play a track or album from Spotify.")
     @app_commands.describe(query="Spotify link or title.")
     async def spotify(self, interaction: discord.Interaction, query: str) -> None:
-        # Calls play with the query / link
         await self.play(interaction, query)
 
 

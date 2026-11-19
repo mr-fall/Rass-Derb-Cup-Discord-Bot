@@ -17,13 +17,11 @@ import yt_dlp
 logger = logging.getLogger(__name__)
 
 # Find ffmpeg binary
-FFMPEG_PATH = shutil.which("ffmpeg")
-if not FFMPEG_PATH:
-    venv_ffmpeg = Path(__file__).resolve().parents[2] / ".venv" / "Scripts" / "ffmpeg.exe"
-    if venv_ffmpeg.is_file():
-        FFMPEG_PATH = str(venv_ffmpeg)
-    else:
-        FFMPEG_PATH = "ffmpeg"
+venv_ffmpeg = Path(__file__).resolve().parents[2] / ".venv" / "Scripts" / "ffmpeg.exe"
+if venv_ffmpeg.is_file():
+    FFMPEG_PATH = str(venv_ffmpeg)
+else:
+    FFMPEG_PATH = shutil.which("ffmpeg") or "ffmpeg"
 
 FFMPEG_BEFORE_OPTIONS = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
 FFMPEG_OPTIONS = "-vn"
@@ -107,28 +105,27 @@ class MusicPlayer:
             if self.text_channel:
                 asyncio.run_coroutine_threadsafe(
                     self.text_channel.send(
-                        "🎵 Queue is empty. Leaving or waiting for new songs.",
-                        delete_after=15,
+                        "🎵 Queue is empty.",
+                        delete_after=10,
                     ),
                     self.voice_client.loop,
                 )
             return
 
         self.current = self.queue.pop(0)
-        self._start_stream(self.current)
+        self._start_stream(self.current, announce=True)
 
-    def _start_stream(self, song: Song) -> None:
+    def _start_stream(self, song: Song, announce: bool = False) -> None:
         if not self.voice_client or not self.voice_client.is_connected():
             return
 
         try:
-            # Re-extract fresh stream URL if needed
             stream_url = song.stream_url
             if not stream_url or "manifest" in stream_url:
                 with yt_dlp.YoutubeDL(YTDL_OPTS) as ydl:
                     info = ydl.extract_info(song.webpage_url, download=False)
-                    if info and "url" in info:
-                        stream_url = info["url"]
+                    if info:
+                        stream_url = extract_best_stream_url(info) or song.webpage_url
                         song.stream_url = stream_url
 
             source = discord.FFmpegPCMAudio(
@@ -140,8 +137,8 @@ class MusicPlayer:
             transformed = discord.PCMVolumeTransformer(source, volume=self.volume)
             self.voice_client.play(transformed, after=self.play_next)
 
-            # Send now playing notification
-            if self.text_channel:
+            # Send now playing notification when advancing through queue automatically
+            if announce and self.text_channel:
                 embed = self.create_now_playing_embed()
                 from rass_derb_bot.cogs.music_controls import MusicControlView
                 view = MusicControlView(self)
@@ -171,9 +168,9 @@ class MusicPlayer:
 
         embed.add_field(name="Duration", value=song.formatted_duration, inline=True)
         embed.add_field(name="Requested By", value=song.requester.mention, inline=True)
-        embed.add_field(name="Loop Mode", value=self.loop_mode.capitalize(), inline=True)
+        embed.add_field(name="Loop", value=self.loop_mode.capitalize(), inline=True)
         embed.add_field(name="Volume", value=f"{int(self.volume * 100)}%", inline=True)
-        embed.add_field(name="Queue Length", value=f"{len(self.queue)} track(s)", inline=True)
+        embed.add_field(name="Queue", value=f"{len(self.queue)} track(s)", inline=True)
         embed.set_footer(text="Rass Derb Cup Music System ✨")
         return embed
 
@@ -218,11 +215,23 @@ class MusicPlayer:
         return count
 
 
+def extract_best_stream_url(info: dict[str, Any]) -> str:
+    """Extract direct audio stream URL with highest audio bitrate from yt-dlp info."""
+    formats = info.get("formats", [])
+    audio_formats = [
+        f for f in formats
+        if f.get("acodec") != "none" and f.get("url") and not f.get("manifest_url")
+    ]
+    if audio_formats:
+        audio_formats.sort(key=lambda f: f.get("abr") or 0, reverse=True)
+        return str(audio_formats[0]["url"])
+    return str(info.get("url", ""))
+
+
 async def search_and_extract_song(query: str, requester: discord.Member) -> Song | None:
     """Extract track metadata and stream URL via yt-dlp in a background thread."""
     def _extract() -> Song | None:
         opts = dict(YTDL_OPTS)
-        # If not a direct URL, search YouTube
         search_query = query if query.startswith(("http://", "https://")) else f"ytsearch1:{query}"
         with yt_dlp.YoutubeDL(opts) as ydl:
             try:
@@ -236,15 +245,19 @@ async def search_and_extract_song(query: str, requester: discord.Member) -> Song
 
             entry = info
             if "entries" in info:
-                entries = list(info["entries"])
+                entries = [e for e in info["entries"] if e]
                 if not entries:
                     return None
                 entry = entries[0]
 
+            stream_url = extract_best_stream_url(entry)
+            if not stream_url:
+                stream_url = entry.get("url", "")
+
             return Song(
                 title=entry.get("title", "Unknown Title"),
                 webpage_url=entry.get("webpage_url") or entry.get("url") or query,
-                stream_url=entry.get("url", ""),
+                stream_url=stream_url,
                 duration=int(entry.get("duration") or 0),
                 thumbnail=entry.get("thumbnail"),
                 uploader=entry.get("uploader"),
