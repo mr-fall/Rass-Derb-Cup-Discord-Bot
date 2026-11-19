@@ -1,4 +1,4 @@
-"""Admin-only command for sending custom JSON embeds."""
+"""Admin command for sending custom tournament JSON embeds."""
 
 from __future__ import annotations
 
@@ -16,6 +16,19 @@ from rass_derb_bot.services.embed_payload import (
 logger = logging.getLogger(__name__)
 
 
+def is_staff(user: discord.Member) -> bool:
+    """Check if the user is the bot owner or has management permissions."""
+    if user.id == 922592319826427955:
+        return True
+    perms = user.guild_permissions
+    return (
+        perms.administrator
+        or perms.manage_guild
+        or perms.manage_channels
+        or perms.manage_messages
+    )
+
+
 class EmbedCog(commands.Cog):
     """Slash commands for composing and sending Discord embeds."""
 
@@ -24,9 +37,8 @@ class EmbedCog(commands.Cog):
 
     @app_commands.command(
         name="embed",
-        description="Send a custom JSON embed to a text channel.",
+        description="Send a custom JSON embed or announcement to a text channel.",
     )
-    @app_commands.default_permissions(manage_guild=True)
     @app_commands.describe(
         payload="JSON with content, embeds, or top-level embed fields.",
         channel="Where to post; defaults to this channel.",
@@ -46,9 +58,9 @@ class EmbedCog(commands.Cog):
             )
             return
 
-        if not interaction.user.guild_permissions.manage_guild:
+        if not is_staff(interaction.user):
             await interaction.response.send_message(
-                "You need the Manage Server permission to use this command.",
+                "❌ You need staff permissions (Administrator or Manage Channels/Messages/Server) to use this command.",
                 ephemeral=True,
             )
             return
@@ -101,4 +113,3 @@ class EmbedCog(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(EmbedCog(bot))
-

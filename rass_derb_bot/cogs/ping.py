@@ -9,7 +9,7 @@ from discord.ext import commands
 from rass_derb_bot.services.ping import format_ping
 
 
-class MentionPingCog(commands.Cog, name="Information"):
+class MentionPingCog(commands.Cog):
     """Handle latency checks and professional bot information."""
 
     def __init__(self, bot: commands.Bot) -> None:

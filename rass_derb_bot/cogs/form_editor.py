@@ -9,6 +9,19 @@ from discord.ext import commands
 from rass_derb_bot.ui.form_editor import FormEditorView
 
 
+def is_staff(user: discord.Member) -> bool:
+    """Check if the user is the bot owner or has management permissions."""
+    if user.id == 922592319826427955:
+        return True
+    perms = user.guild_permissions
+    return (
+        perms.administrator
+        or perms.manage_guild
+        or perms.manage_channels
+        or perms.manage_messages
+    )
+
+
 class FormEditorCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -17,7 +30,6 @@ class FormEditorCog(commands.Cog):
         name="edit-form",
         description="Select a section to edit questions and embed appearance.",
     )
-    @app_commands.default_permissions(manage_guild=True)
     async def edit_form(self, interaction: discord.Interaction) -> None:
         if interaction.guild is None or not isinstance(
             interaction.user, discord.Member
@@ -27,12 +39,14 @@ class FormEditorCog(commands.Cog):
                 ephemeral=True,
             )
             return
-        if not interaction.user.guild_permissions.manage_guild:
+
+        if not is_staff(interaction.user):
             await interaction.response.send_message(
-                "You need Manage Server permission to edit forms.",
+                "❌ You need staff permissions (Administrator or Manage Channels/Messages/Server) to edit forms.",
                 ephemeral=True,
             )
             return
+
         if self.bot.forms is None:
             await interaction.response.send_message(
                 "The form database is unavailable.",
@@ -60,4 +74,3 @@ class FormEditorCog(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(FormEditorCog(bot))
-

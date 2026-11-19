@@ -27,7 +27,6 @@ class RassDerbBot(commands.Bot):
         "rass_derb_bot.cogs.form_admin",
         "rass_derb_bot.cogs.form_editor",
         "rass_derb_bot.cogs.help",
-        "rass_derb_bot.cogs.music",
     )
 
     def __init__(self, settings: Settings) -> None:
@@ -52,22 +51,20 @@ class RassDerbBot(commands.Bot):
                 or (ctx.guild and ctx.author.guild_permissions.manage_guild)
             )
             if not has_perm:
-                await ctx.send("❌ You need Manage Server or Administrator permission to use this command.")
                 return
 
-            status_msg = await ctx.send("⏳ Synchronizing slash commands...")
             try:
                 if ctx.guild:
-                    self.tree.copy_global_to(guild=ctx.guild)
-                    synced = await self.tree.sync(guild=ctx.guild)
-                    await self.tree.sync()
-                    await status_msg.edit(content=f"✅ Instantly synchronized {len(synced)} commands to **{ctx.guild.name}**! (Press Ctrl+R in Discord to refresh)")
-                else:
-                    synced = await self.tree.sync()
-                    await status_msg.edit(content=f"✅ Synchronized {len(synced)} global commands.")
+                    self.tree.clear_commands(guild=ctx.guild)
+                    await self.tree.sync(guild=ctx.guild)
+                synced = await self.tree.sync()
+                logger.info("Backend manual sync: %d global command(s).", len(synced))
+                try:
+                    await ctx.message.add_reaction("✅")
+                except Exception:
+                    pass
             except Exception as e:
                 logger.exception("Manual sync failed: %s", e)
-                await status_msg.edit(content=f"❌ Sync failed: `{e}`")
 
     def register_persistent_view(self, view: discord.ui.View) -> None:
         """Queue a timeout-free view for registration after extensions load."""
@@ -123,29 +120,20 @@ class RassDerbBot(commands.Bot):
 
         await self._restore_persistent_form_buttons()
 
-        # Global sync
+        # Automatic backend sync on startup
         synced = await self.tree.sync()
-        logger.info("Synchronized %d global application command(s).", len(synced))
+        logger.info("Backend auto-synced %d global application command(s).", len(synced))
 
     async def on_ready(self) -> None:
         logger.info("Logged in as %s (ID: %s)", self.user, self.user.id if self.user else "None")
-        # Automatically sync commands to all connected guilds for instant availability
+        # Clear any guild-level duplicates to ensure clean 1x global commands everywhere
         for guild in self.guilds:
             try:
-                self.tree.copy_global_to(guild=guild)
-                synced = await self.tree.sync(guild=guild)
-                logger.info("Auto-synced %d commands to guild '%s' (%d)", len(synced), guild.name, guild.id)
+                self.tree.clear_commands(guild=guild)
+                await self.tree.sync(guild=guild)
+                logger.info("Cleaned guild-level commands from '%s' (%d) to prevent duplicates.", guild.name, guild.id)
             except Exception as e:
-                logger.warning("Could not auto-sync commands to guild '%s': %s", guild.name, e)
-
-    async def on_guild_join(self, guild: discord.Guild) -> None:
-        """Instantly sync slash commands when added to a new server."""
-        try:
-            self.tree.copy_global_to(guild=guild)
-            synced = await self.tree.sync(guild=guild)
-            logger.info("Auto-synced %d commands to newly joined guild '%s' (%d)", len(synced), guild.name, guild.id)
-        except Exception as e:
-            logger.warning("Could not auto-sync commands to newly joined guild '%s': %s", guild.name, e)
+                logger.debug("Could not clean guild commands in '%s': %s", guild.name, e)
 
     async def _remove_legacy_embed_command(self) -> None:
         guild_id = self.settings.legacy_guild_id

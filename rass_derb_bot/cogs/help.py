@@ -1,4 +1,4 @@
-"""Interactive Help command with category dropdown menus matching the reference design."""
+"""Interactive Help command with category dropdown menus for Esports PUBG MOBILE MEA."""
 
 from __future__ import annotations
 
@@ -9,14 +9,9 @@ from discord.ext import commands
 DEFAULT_HELP_BANNER = "https://cdn.discordapp.com/attachments/1570837395190976583/1572417416254722139/image.png?ex=6afef416&is=6afda296&hm=7eb08b1e535da10bc9fab2e3219d576fe0d8564970a7d13e12f8eba337a6b987&animated=true"
 
 CATEGORY_COMMANDS = {
-    "music": [
-        "play", "pause", "resume", "skip", "stop", "nowplaying",
-        "queue", "volume", "loop", "shuffle", "clear", "join",
-        "leave", "previous", "remove", "skipto"
-    ],
-    "information": ["help", "ping"],
     "forms": ["embed", "form-section", "form-question", "setup-form", "button-form", "edit-form"],
-    "settings": ["setup-form", "edit-form", "volume", "loop"],
+    "information": ["help", "ping"],
+    "settings": ["setup-form", "edit-form"],
 }
 
 
@@ -30,32 +25,26 @@ class HelpCategorySelect(discord.ui.Select):
                 emoji="🏠",
             ),
             discord.SelectOption(
-                label="Information",
-                value="information",
-                description="General bot information and latency.",
-                emoji="ℹ️",
-            ),
-            discord.SelectOption(
-                label="Music",
-                value="music",
-                description="View all core music commands.",
-                emoji="🎵",
-            ),
-            discord.SelectOption(
                 label="Forms & Embeds",
                 value="forms",
-                description="Tournament forms and announcement embeds.",
+                description="Tournament registration forms and announcement embeds.",
                 emoji="🌐",
+            ),
+            discord.SelectOption(
+                label="Information",
+                value="information",
+                description="Bot status, ping, and latency.",
+                emoji="ℹ️",
             ),
             discord.SelectOption(
                 label="Settings",
                 value="settings",
-                description="Configuration and admin setup.",
+                description="Staff configuration and form routing.",
                 emoji="⚙️",
             ),
         ]
         super().__init__(
-            placeholder="🎧 | Select to view the commands.",
+            placeholder="📋 | Select to view command categories.",
             min_values=1,
             max_values=1,
             options=options,
@@ -81,43 +70,43 @@ class HelpView(discord.ui.View):
 
 
 def build_home_embed(bot_user: discord.User | discord.ClientUser | None) -> discord.Embed:
-    bot_name = bot_user.name if bot_user else "Rass Derb Bot"
+    bot_name = bot_user.name if bot_user else "RASS DERB CUP"
     embed = discord.Embed(
-        title=f"{bot_name} ✨ Help Panel",
+        title=f"{bot_name} • Esports Help Panel",
+        description="Official tournament management bot for **Rass Derb Cup • Esports PUBG MOBILE MEA**.",
         color=discord.Color.from_rgb(46, 134, 222),
     )
     if bot_user and bot_user.display_avatar:
-        embed.set_author(name=f"{bot_name} ✨ Help Panel", icon_url=bot_user.display_avatar.url)
+        embed.set_author(name=f"{bot_name} • Tournament Bot", icon_url=bot_user.display_avatar.url)
         embed.set_thumbnail(url=bot_user.display_avatar.url)
 
     embed.add_field(
-        name="🚀 How to play music",
-        value="`/play <name/url>`",
+        name="🏆 Tournament Forms & Registration",
+        value=(
+            "Use `/form-section` to define sections, `/form-question` to add fields, "
+            "`/setup-form` to link to staff channels, and `/button-form` to add a registration button."
+        ),
         inline=False,
     )
     embed.add_field(
-        name=f"❓ What is {bot_name}?",
-        value=(
-            "A Next-Generation Discord Bot With Many Awesome Features, Buttons, Menus, "
-            "Music System, Tournament Forms, and Customizable Settings."
-        ),
+        name="📢 Announcements & Embeds",
+        value="Use `/embed` to post official formatted tournament embeds with custom JSON.",
         inline=False,
     )
     embed.add_field(
         name="🎛 Command Categories:",
         value=(
-            "ℹ️ : **Information**\n"
-            "🎵 : **Music**\n"
-            "🌐 : **Forms & Embeds**\n"
-            "⚙️ : **Settings**"
+            "🌐 : **Forms & Embeds** (Tournament registration & posts)\n"
+            "ℹ️ : **Information** (Bot status & ping)\n"
+            "⚙️ : **Settings** (Staff setup)"
         ),
         inline=False,
     )
     embed.set_image(url=DEFAULT_HELP_BANNER)
     if bot_user and bot_user.display_avatar:
-        embed.set_footer(text=f"Thank you for selecting {bot_name} ✨!", icon_url=bot_user.display_avatar.url)
+        embed.set_footer(text="Rass Derb Cup • Esports PUBG MOBILE MEA", icon_url=bot_user.display_avatar.url)
     else:
-        embed.set_footer(text=f"Thank you for selecting {bot_name} ✨!")
+        embed.set_footer(text="Rass Derb Cup • Esports PUBG MOBILE MEA")
     return embed
 
 
@@ -125,9 +114,8 @@ def build_category_embed(
     category_key: str, bot_user: discord.User | discord.ClientUser | None
 ) -> discord.Embed:
     titles = {
-        "music": "Categories » Music",
-        "information": "Categories » Information",
         "forms": "Categories » Forms & Embeds",
+        "information": "Categories » Information",
         "settings": "Categories » Settings",
     }
     title = titles.get(category_key, f"Categories » {category_key.capitalize()}")
@@ -135,15 +123,15 @@ def build_category_embed(
 
     embed = discord.Embed(
         title=title,
-        description="```\nHere are the " + category_key + " commands:\n```",
+        description=f"```\nAvailable commands for {category_key}:\n```",
         color=discord.Color.from_rgb(46, 134, 222),
     )
     if bot_user and bot_user.display_avatar:
         embed.set_thumbnail(url=bot_user.display_avatar.url)
 
-    formatted_cmds = " ".join(f"`{cmd}`" for cmd in cmd_list)
+    formatted_cmds = " ".join(f"`/{cmd}`" for cmd in cmd_list)
     embed.add_field(
-        name=f"🎵 Commands Total [ {len(cmd_list)} ]",
+        name=f"Commands Total [ {len(cmd_list)} ]",
         value=formatted_cmds or "No commands available.",
         inline=False,
     )
@@ -151,13 +139,13 @@ def build_category_embed(
     return embed
 
 
-class HelpCog(commands.Cog, name="Help"):
+class HelpCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     @app_commands.command(
         name="help",
-        description="View the interactive help menu with all commands and music system.",
+        description="View the interactive help menu for tournament management and commands.",
     )
     async def help(self, interaction: discord.Interaction) -> None:
         embed = build_home_embed(self.bot.user)
