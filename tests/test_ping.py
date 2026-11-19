@@ -1,4 +1,4 @@
-"""Unit tests for mention-ping response formatting."""
+"""Unit tests for ping command and mention formatting."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from rass_derb_bot.cogs.ping import BOSS_REPLIES, MentionPingCog, BOSS_USER_ID
+from rass_derb_bot.cogs.ping import MentionPingCog
 from rass_derb_bot.services.ping import format_ping
 
 
@@ -19,21 +19,6 @@ class FormatPingTests(unittest.TestCase):
 
 
 class MentionPingListenerTests(unittest.IsolatedAsyncioTestCase):
-    async def test_replies_when_boss_is_mentioned(self) -> None:
-        bot_user = object()
-        bot = SimpleNamespace(user=bot_user, latency=0.042)
-        message = SimpleNamespace(
-            author=SimpleNamespace(bot=False, id=BOSS_USER_ID),
-            content="@bot salam",
-            mentions=[bot_user],
-            reply=AsyncMock(),
-        )
-
-        await MentionPingCog(bot).on_message(message)
-
-        message.reply.assert_awaited_once()
-        self.assertIn(message.reply.await_args.args[0], BOSS_REPLIES)
-
     async def test_replies_latency_when_ping_requested(self) -> None:
         bot_user = object()
         bot = SimpleNamespace(user=bot_user, latency=0.042)
@@ -48,6 +33,21 @@ class MentionPingListenerTests(unittest.IsolatedAsyncioTestCase):
 
         message.reply.assert_awaited_once()
         self.assertEqual(message.reply.await_args.args[0], "Pong — 42 ms")
+
+    async def test_replies_professional_message_on_general_mention(self) -> None:
+        bot_user = object()
+        bot = SimpleNamespace(user=bot_user, latency=0.042)
+        message = SimpleNamespace(
+            author=SimpleNamespace(bot=False, id=922592319826427955),
+            content="@bot salam",
+            mentions=[bot_user],
+            reply=AsyncMock(),
+        )
+
+        await MentionPingCog(bot).on_message(message)
+
+        message.reply.assert_awaited_once()
+        self.assertIn("/help", message.reply.await_args.args[0])
 
     async def test_ignores_messages_from_bots(self) -> None:
         bot_user = object()

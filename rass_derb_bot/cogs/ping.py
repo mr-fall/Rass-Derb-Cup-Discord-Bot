@@ -1,73 +1,50 @@
-"""Respond to mentions with boss greetings, latency stats, or Moroccan banter."""
+"""Latency check and clean mention handling for Rass Derb Cup bot."""
 
 from __future__ import annotations
 
-import random
-import re
-
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from rass_derb_bot.services.ping import format_ping
 
-BOSS_USER_ID = 922592319826427955
 
-BOSS_REPLIES = [
-    "N3am a sidi! 👑",
-    "N3am a chef! Marhba bik 🙌",
-    "Llay barek f 3mr sidi! Khedam 3la wdek 🫡",
-    "Merhba b l-boss dyalna! Ash kat-amer a chef? ✨",
-]
-
-DISRESPECT_PATTERNS = re.compile(r"\b(xkon|chkon|chkoun|xkun|who)\s+(nta|ntaya|you)\b", re.IGNORECASE)
-
-SAVAGE_REPLIES = [
-    "Li 7wak! ... Wa ta sir layhdik chouf khedma l rask 😂",
-    "Ana l-bot dyal Rass Derb Cup w syadk! Nta chkon daha fik? 🥱",
-]
-
-GENERAL_USER_REPLIES = [
-    "Hta tkoun qad syadk 3ad aji dwi m3aya 😉",
-    "Mat-déronjinch db, rani m3a sidi w chef dyali 👑",
-    "Sir hta tkber 3ad aji t-tagini 🤫",
-]
-
-
-class MentionPingCog(commands.Cog):
-    """Handle bot mentions and fun Moroccan interactions."""
+class MentionPingCog(commands.Cog, name="Information"):
+    """Handle latency checks and professional bot information."""
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
+    @app_commands.command(name="ping", description="Check the bot latency and responsiveness.")
+    async def ping(self, interaction: discord.Interaction) -> None:
+        """Slash command to check bot latency."""
+        latency_ms = max(0, round(self.bot.latency * 1000))
+        embed = discord.Embed(
+            title="🏓 Pong!",
+            description=f"**Latency:** `{latency_ms} ms`\n**Status:** `Operational` 🟢",
+            color=discord.Color.from_rgb(46, 134, 222),
+        )
+        embed.set_footer(text="Rass Derb Cup • Esports PUBG MOBILE MEA")
+        await interaction.response.send_message(embed=embed)
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
+        """Professional response when the bot is mentioned."""
         if message.author.bot or self.bot.user is None:
             return
         if self.bot.user not in message.mentions:
             return
 
         content = message.content.lower()
-
-        # If user is the Boss
-        if message.author.id == BOSS_USER_ID:
-            reply = random.choice(BOSS_REPLIES)
-            await message.reply(reply, mention_author=True)
-            return
-
-        # If someone else asked who the bot is or trash-talked
-        if DISRESPECT_PATTERNS.search(content):
-            reply = random.choice(SAVAGE_REPLIES)
-            await message.reply(reply, mention_author=True)
-            return
-
-        # If they specifically asked for ping/latency
-        if "ping" in content or "ms" in content or "latency" in content:
+        if "ping" in content:
             await message.reply(format_ping(self.bot.latency), mention_author=False)
             return
 
-        # General mention by anyone else
-        reply = random.choice(GENERAL_USER_REPLIES)
-        await message.reply(reply, mention_author=True)
+        await message.reply(
+            "👋 Hello! I am the official bot for **Rass Derb Cup • Esports PUBG MOBILE MEA**.\n"
+            "Use `/help` to view all available commands.",
+            mention_author=False,
+        )
 
 
 async def setup(bot: commands.Bot) -> None:

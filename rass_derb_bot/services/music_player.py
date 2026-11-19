@@ -27,7 +27,7 @@ FFMPEG_BEFORE_OPTIONS = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max
 FFMPEG_OPTIONS = "-vn"
 
 YTDL_OPTS = {
-    "format": "bestaudio/best",
+    "format": "bestaudio[ext=m4a]/bestaudio/best",
     "noplaylist": True,
     "quiet": True,
     "no_warnings": True,

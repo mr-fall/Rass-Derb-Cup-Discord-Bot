@@ -44,14 +44,30 @@ class RassDerbBot(commands.Bot):
 
     def _register_prefix_commands(self) -> None:
         @self.command(name="sync")
-        @commands.has_permissions(manage_guild=True)
         async def sync_cmd(ctx: commands.Context) -> None:
-            if ctx.guild:
-                # Clear guild-level commands to prevent duplicates with global commands
-                self.tree.clear_commands(guild=ctx.guild)
-                await self.tree.sync(guild=ctx.guild)
-            synced = await self.tree.sync()
-            await ctx.send(f"✅ Synchronized {len(synced)} commands.")
+            is_owner = ctx.author.id == 922592319826427955 or await self.is_owner(ctx.author)
+            has_perm = (
+                is_owner
+                or (ctx.guild and ctx.author.guild_permissions.administrator)
+                or (ctx.guild and ctx.author.guild_permissions.manage_guild)
+            )
+            if not has_perm:
+                await ctx.send("❌ You need Manage Server or Administrator permission to use this command.")
+                return
+
+            status_msg = await ctx.send("⏳ Synchronizing slash commands...")
+            try:
+                if ctx.guild:
+                    self.tree.copy_global_to(guild=ctx.guild)
+                    synced = await self.tree.sync(guild=ctx.guild)
+                    await self.tree.sync()
+                    await status_msg.edit(content=f"✅ Instantly synchronized {len(synced)} commands to **{ctx.guild.name}**! (Press Ctrl+R in Discord to refresh)")
+                else:
+                    synced = await self.tree.sync()
+                    await status_msg.edit(content=f"✅ Synchronized {len(synced)} global commands.")
+            except Exception as e:
+                logger.exception("Manual sync failed: %s", e)
+                await status_msg.edit(content=f"❌ Sync failed: `{e}`")
 
     def register_persistent_view(self, view: discord.ui.View) -> None:
         """Queue a timeout-free view for registration after extensions load."""
@@ -113,14 +129,23 @@ class RassDerbBot(commands.Bot):
 
     async def on_ready(self) -> None:
         logger.info("Logged in as %s (ID: %s)", self.user, self.user.id if self.user else "None")
-        # Clean up any leftover guild-level commands in all guilds to eliminate duplicates
+        # Automatically sync commands to all connected guilds for instant availability
         for guild in self.guilds:
             try:
-                self.tree.clear_commands(guild=guild)
-                await self.tree.sync(guild=guild)
-                logger.info("Removed duplicate guild commands from '%s' (%d)", guild.name, guild.id)
+                self.tree.copy_global_to(guild=guild)
+                synced = await self.tree.sync(guild=guild)
+                logger.info("Auto-synced %d commands to guild '%s' (%d)", len(synced), guild.name, guild.id)
             except Exception as e:
-                logger.debug("Could not clean guild commands in '%s': %s", guild.name, e)
+                logger.warning("Could not auto-sync commands to guild '%s': %s", guild.name, e)
+
+    async def on_guild_join(self, guild: discord.Guild) -> None:
+        """Instantly sync slash commands when added to a new server."""
+        try:
+            self.tree.copy_global_to(guild=guild)
+            synced = await self.tree.sync(guild=guild)
+            logger.info("Auto-synced %d commands to newly joined guild '%s' (%d)", len(synced), guild.name, guild.id)
+        except Exception as e:
+            logger.warning("Could not auto-sync commands to newly joined guild '%s': %s", guild.name, e)
 
     async def _remove_legacy_embed_command(self) -> None:
         guild_id = self.settings.legacy_guild_id
