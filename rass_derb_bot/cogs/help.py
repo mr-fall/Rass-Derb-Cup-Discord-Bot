@@ -10,13 +10,11 @@ DEFAULT_HELP_BANNER = "https://cdn.discordapp.com/attachments/157083739519097658
 
 CATEGORY_COMMANDS = {
     "music": [
-        "autoplay", "backward", "clearqueue", "firstplay", "forward",
-        "join", "leave", "loop", "lyrics", "move", "nowplaying",
-        "pause", "play", "previous", "queue", "remove", "resume",
-        "seek", "shuffle", "skip", "skipto", "spotify", "stop", "volume",
+        "play", "pause", "resume", "skip", "stop", "nowplaying",
+        "queue", "volume", "loop", "shuffle", "clear", "join",
+        "leave", "previous", "remove", "skipto"
     ],
-    "information": ["help", "ping", "stats", "uptime", "invite"],
-    "filter": ["bassboost", "nightcore", "vaporwave", "8d", "clearfilter"],
+    "information": ["help", "ping"],
     "forms": ["embed", "form-section", "form-question", "setup-form", "button-form", "edit-form"],
     "settings": ["setup-form", "edit-form", "volume", "loop"],
 }
@@ -34,20 +32,14 @@ class HelpCategorySelect(discord.ui.Select):
             discord.SelectOption(
                 label="Information",
                 value="information",
-                description="General bot and latency commands.",
+                description="General bot information and latency.",
                 emoji="ℹ️",
             ),
             discord.SelectOption(
                 label="Music",
                 value="music",
-                description="View all 24 music commands.",
+                description="View all core music commands.",
                 emoji="🎵",
-            ),
-            discord.SelectOption(
-                label="Filter",
-                value="filter",
-                description="Audio equalizer and sound filters.",
-                emoji="🎚",
             ),
             discord.SelectOption(
                 label="Forms & Embeds",
@@ -107,7 +99,7 @@ def build_home_embed(bot_user: discord.User | discord.ClientUser | None) -> disc
         name=f"❓ What is {bot_name}?",
         value=(
             "A Next-Generation Discord Bot With Many Awesome Features, Buttons, Menus, "
-            "a Context Menu, Support for Many Sources, and Customizable Settings"
+            "Music System, Tournament Forms, and Customizable Settings."
         ),
         inline=False,
     )
@@ -116,10 +108,7 @@ def build_home_embed(bot_user: discord.User | discord.ClientUser | None) -> disc
         value=(
             "ℹ️ : **Information**\n"
             "🎵 : **Music**\n"
-            "🎚 : **Filter**\n"
             "🌐 : **Forms & Embeds**\n"
-            "📑 : **Playlist**\n"
-            "⭐ : **Favorite**\n"
             "⚙️ : **Settings**"
         ),
         inline=False,
@@ -138,7 +127,6 @@ def build_category_embed(
     titles = {
         "music": "Categories » Music",
         "information": "Categories » Information",
-        "filter": "Categories » Filter",
         "forms": "Categories » Forms & Embeds",
         "settings": "Categories » Settings",
     }
@@ -153,7 +141,6 @@ def build_category_embed(
     if bot_user and bot_user.display_avatar:
         embed.set_thumbnail(url=bot_user.display_avatar.url)
 
-    # Format commands in backticks separated by spaces
     formatted_cmds = " ".join(f"`{cmd}`" for cmd in cmd_list)
     embed.add_field(
         name=f"🎵 Commands Total [ {len(cmd_list)} ]",
