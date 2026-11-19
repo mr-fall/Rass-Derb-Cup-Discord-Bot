@@ -1,0 +1,7 @@
+services:
+  rass-derb-bot:
+    build: .
+    container_name: rass-derb-bot
+    restart: unless-stopped
+    env_file:
+      - .env

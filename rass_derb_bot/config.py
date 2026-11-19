@@ -1,9 +1,15 @@
-"""Runtime configuration loaded from Replit Secrets and environment variables."""
+"""Runtime configuration loaded from environment variables or .env file."""
 
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,13 +24,13 @@ class Settings:
         token = os.getenv("TOKEN", "").strip()
         if not token:
             raise RuntimeError(
-                "Missing TOKEN. Add the Discord bot token as a Replit Secret named TOKEN."
+                "Missing TOKEN. Add the Discord bot token to your .env file or environment variables as TOKEN."
             )
 
         database_url = os.getenv("DATABASE_URL", "").strip()
         if not database_url:
             raise RuntimeError(
-                "Missing DATABASE_URL. Add the project's PostgreSQL connection as a Replit Secret."
+                "Missing DATABASE_URL. Add the PostgreSQL connection string to your .env file or environment variables."
             )
 
         guild_id = _optional_positive_id("GUILD_ID")
