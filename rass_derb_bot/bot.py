@@ -27,6 +27,7 @@ class RassDerbBot(commands.Bot):
         "rass_derb_bot.cogs.form_admin",
         "rass_derb_bot.cogs.form_editor",
         "rass_derb_bot.cogs.help",
+        "rass_derb_bot.cogs.music",
     )
 
     def __init__(self, settings: Settings) -> None:
