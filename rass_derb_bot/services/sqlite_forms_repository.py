@@ -112,10 +112,26 @@ class SQLiteFormsRepository:
         *,
         active_only: bool = True,
     ) -> dict[str, Any] | None:
-        sql = "SELECT * FROM discord_form_sections WHERE guild_id = ? AND slug = ?"
-        params: list[Any] = [guild_id, slug]
+        clean = slug.strip()
+        if "(/" in clean and clean.endswith(")"):
+            clean = clean.split("(/")[-1].rstrip(")")
+        clean = clean.lstrip("/")
+
+        sql = """
+            SELECT * FROM discord_form_sections
+            WHERE guild_id = ?
+              AND (
+                  LOWER(slug) = LOWER(?)
+                  OR LOWER(title) = LOWER(?)
+                  OR slug = ?
+                  OR id = ?
+              )
+        """
+        sec_id = int(clean) if clean.isdigit() else -1
+        params: list[Any] = [guild_id, clean, clean, clean, sec_id]
         if active_only:
             sql += " AND active = 1"
+        sql += " ORDER BY id LIMIT 1"
         async with self.db.execute(sql, params) as cursor:
             row = await cursor.fetchone()
             return dict(row) if row else None
@@ -322,6 +338,10 @@ class SQLiteFormsRepository:
         style: str,
         created_by: int,
     ) -> dict[str, Any]:
+        await self.db.execute(
+            "DELETE FROM discord_form_buttons WHERE message_id = ?",
+            (message_id,),
+        )
         await self.db.execute(
             """
             INSERT INTO discord_form_buttons

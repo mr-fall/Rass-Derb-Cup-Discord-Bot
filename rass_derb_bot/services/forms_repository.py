@@ -111,16 +111,31 @@ class FormsRepository:
         *,
         active_only: bool = True,
     ) -> dict[str, Any] | None:
+        clean = slug.strip()
+        if "(/" in clean and clean.endswith(")"):
+            clean = clean.split("(/")[-1].rstrip(")")
+        clean = clean.lstrip("/")
+
+        sec_id = int(clean) if clean.isdigit() else -1
         row = await self.pool.fetchrow(
             """
             SELECT *
             FROM discord_form_sections
-            WHERE guild_id = $1 AND slug = $2
+            WHERE guild_id = $1
+              AND (
+                  LOWER(slug) = LOWER($2)
+                  OR LOWER(title) = LOWER($2)
+                  OR slug = $2
+                  OR id = $4
+              )
               AND ($3::boolean = FALSE OR active = TRUE)
+            ORDER BY id
+            LIMIT 1
             """,
             guild_id,
-            slug,
+            clean,
             active_only,
+            sec_id,
         )
         return dict(row) if row else None
 

@@ -161,10 +161,18 @@ class FormAdminCog(commands.Cog):
             section,
         )
         if section_record is None:
-            await interaction.response.send_message(
-                "Choose an active section. Create one first with `/form-section`.",
-                ephemeral=True,
-            )
+            available = await repository.list_sections(interaction.guild.id)
+            if not available:
+                await interaction.response.send_message(
+                    "❌ No active form sections in this server. Create one first with `/form-section`.",
+                    ephemeral=True,
+                )
+            else:
+                names = ", ".join(f"`{s['slug']}`" for s in available)
+                await interaction.response.send_message(
+                    f"❌ Section `{section}` not found. Available active section(s): {names}",
+                    ephemeral=True,
+                )
             return
 
         try:
@@ -238,10 +246,18 @@ class FormAdminCog(commands.Cog):
             section,
         )
         if section_record is None:
-            await interaction.response.send_message(
-                "Choose an active section. Create one first with `/form-section`.",
-                ephemeral=True,
-            )
+            available = await repository.list_sections(interaction.guild.id)
+            if not available:
+                await interaction.response.send_message(
+                    "❌ No active form sections in this server. Create one first with `/form-section`.",
+                    ephemeral=True,
+                )
+            else:
+                names = ", ".join(f"`{s['slug']}`" for s in available)
+                await interaction.response.send_message(
+                    f"❌ Section `{section}` not found. Available active section(s): {names}",
+                    ephemeral=True,
+                )
             return
 
         if channel.permissions_for(interaction.guild.default_role).view_channel:
@@ -325,10 +341,18 @@ class FormAdminCog(commands.Cog):
             section,
         )
         if section_record is None:
-            await interaction.response.send_message(
-                "Choose an active section.",
-                ephemeral=True,
-            )
+            available = await repository.list_sections(interaction.guild.id)
+            if not available:
+                await interaction.response.send_message(
+                    "❌ No active form sections in this server. Create one first with `/form-section`.",
+                    ephemeral=True,
+                )
+            else:
+                names = ", ".join(f"`{s['slug']}`" for s in available)
+                await interaction.response.send_message(
+                    f"❌ Section `{section}` not found. Available active section(s): {names}",
+                    ephemeral=True,
+                )
             return
         if section_record["staff_channel_id"] is None:
             await interaction.response.send_message(
