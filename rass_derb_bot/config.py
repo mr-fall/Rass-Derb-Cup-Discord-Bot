@@ -4,10 +4,29 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+# Look for .env in common local and cloud container locations
+possible_env_paths = [
+    Path.cwd() / ".env",
+    Path(__file__).resolve().parents[1] / ".env",
+    Path("/home/container/.env"),
+    Path.cwd() / "env",
+    Path.cwd() / ".env.txt",
+    Path("/home/container/env"),
+    Path("/home/container/.env.txt"),
+]
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    loaded = False
+    for env_path in possible_env_paths:
+        if env_path.is_file():
+            load_dotenv(env_path, override=True)
+            loaded = True
+            break
+    if not loaded:
+        load_dotenv()
 except ImportError:
     pass
 
@@ -21,10 +40,20 @@ class Settings:
 
     @classmethod
     def from_environment(cls) -> "Settings":
-        token = os.getenv("TOKEN", "").strip()
+        token = (
+            os.getenv("TOKEN", "")
+            or os.getenv("DISCORD_TOKEN", "")
+            or os.getenv("BOT_TOKEN", "")
+        ).strip()
+
         if not token:
+            try:
+                files = [f.name for f in Path.cwd().iterdir() if f.is_file()]
+            except Exception:
+                files = []
             raise RuntimeError(
-                "Missing TOKEN. Add the Discord bot token to your .env file or environment variables as TOKEN."
+                f"Missing TOKEN. Current folder ({Path.cwd()}) contains: {files}. "
+                "Please create a file named '.env' with: TOKEN=your_bot_token"
             )
 
         database_url = os.getenv("DATABASE_URL", "").strip() or "sqlite:///rass_derb.db"
