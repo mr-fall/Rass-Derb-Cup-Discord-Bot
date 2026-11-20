@@ -27,11 +27,7 @@ class Settings:
                 "Missing TOKEN. Add the Discord bot token to your .env file or environment variables as TOKEN."
             )
 
-        database_url = os.getenv("DATABASE_URL", "").strip()
-        if not database_url:
-            raise RuntimeError(
-                "Missing DATABASE_URL. Add the PostgreSQL connection string to your .env file or environment variables."
-            )
+        database_url = os.getenv("DATABASE_URL", "").strip() or "sqlite:///rass_derb.db"
 
         guild_id = _optional_positive_id("GUILD_ID")
         legacy_guild_id = _optional_positive_id("LEGACY_GUILD_ID")
